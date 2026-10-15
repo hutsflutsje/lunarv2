@@ -1,0 +1,14 @@
+{
+    "xy_sens": 5.0,
+    "targeting_sens": 5.0,
+    "xy_scale": 2.0,
+    "targeting_scale": 40.0,
+    "fov": 350,
+    "smoothness": 0.6,
+    "confidence": 0.35,
+    "aim_height": 6,
+    "use_trigger_bot": false,
+    "mouse_method": "win32",
+    "always_on_top": true,
+    "selected_model": "lib/yolov11.pt"
+}
