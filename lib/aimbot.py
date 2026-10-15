@@ -117,6 +117,7 @@ class Aimbot:
 
     mouse_dll = None
     makcu = None
+    ddxoft_attempted = False
 
     def __init__(self, box_constant = fov, collect_data = False, mouse_delay = 0.0009):
         self.box_constant = box_constant
@@ -159,6 +160,11 @@ class Aimbot:
             if not Aimbot.makcu:
                 Aimbot.makcu = MAKCU_UDP()
         elif self.mouse_method.lower() == 'ddxoft':
+            if Aimbot.ddxoft_attempted:
+                if not Aimbot.mouse_dll:
+                    self.mouse_method = 'win32'
+                return
+            Aimbot.ddxoft_attempted = True
             dll_path = os.path.abspath("lib/mouse/dd40605x64.dll")
             if not os.path.exists(dll_path) or not hasattr(ctypes, 'WinDLL'):
                 print(colored(f"[!] ddxoft DLL not applicable or not found at {dll_path}. Defaulting to Win32", "yellow"))
@@ -174,11 +180,13 @@ class Aimbot:
                     init = Aimbot.mouse_dll.DD_btn(0)
                     if init != 1:
                         print(colored('Failed to initialize ddxoft mouse driver (DD_btn return != 1). Defaulting to Win32', 'yellow'))
+                        Aimbot.mouse_dll = None
                         self.mouse_method = 'win32'
                     else:
                         print(colored('Loaded ddxoft mouse driver successfully!', 'green'))
                 except Exception as e:
                     print(colored(f"[!] Error loading ddxoft DLL: {e}. Defaulting to Win32", "yellow"))
+                    Aimbot.mouse_dll = None
                     self.mouse_method = 'win32'
 
     @staticmethod
