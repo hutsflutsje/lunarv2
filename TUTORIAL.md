@@ -1,6 +1,6 @@
 # 📖 Lunar LITE AI Aimbot - Complete Setup & Tutorial Guide
 
-Welcome to the official setup and configuration tutorial for **Lunar LITE AI Aimbot**. This guide covers system requirements, installation, mouse driver DLL setup, GUI controls, sensitivity calibration, and troubleshooting.
+Welcome to the official setup and configuration tutorial for **Lunar LITE AI Aimbot**. This guide covers system requirements, installation, mouse driver DLL / Raspberry Pi Pico HID setup, GUI controls, sensitivity calibration, and troubleshooting.
 
 ---
 
@@ -33,39 +33,36 @@ pip install -r requirements.txt
 
 ---
 
-## 🖱️ Mouse Input Drivers Setup (`ddxoft` / `win32` / `makcu`)
+## 🔌 Raspberry Pi Pico HID Mouse Input Setup
 
-Lunar LITE supports three mouse movement methods:
+Lunar LITE supports using a **Raspberry Pi Pico** as a true hardware USB HID mouse controller.
 
-### 1. `ddxoft` (Recommended - Hardware Level Input Simulation)
-- **Included DLL**: `lib/mouse/dd40605x64.dll`
-- **Setup Requirements**:
-  1. Right-click `start.bat` and select **"Run as administrator"**.
-  2. The `ddxoft` driver provides low-latency kernel-level mouse movements (`DD_movR`) and click events (`DD_btn`).
-  3. If administrative privileges are missing or DLL initialization fails, Lunar LITE gracefully falls back to `win32`.
+### 1. Flashing CircuitPython to Raspberry Pi Pico
+1. Download CircuitPython UF2 for Raspberry Pi Pico from [circuitpython.org](https://circuitpython.org/board/raspberry_pi_pico/).
+2. Hold down the **BOOTSEL** button on your Pi Pico and connect it to your PC via USB.
+3. Drag and drop the `.uf2` file onto the mounted **RPI-RP2** drive. The board will reboot into **CIRCUITPY**.
 
-### 2. `win32` (Standard Windows Input API)
-- Uses standard Windows `SendInput` and `mouse_event` APIs.
-- Works out of the box on any Windows system without driver requirements.
+### 2. Copying Firmware & Libraries
+1. Download the [Adafruit CircuitPython HID bundle](https://github.com/adafruit/Adafruit_CircuitPython_HID/releases) and place the `adafruit_hid` folder into `lib/` on the `CIRCUITPY` drive.
+2. Copy `pico_firmware/code.py` from this project onto the root of your `CIRCUITPY` drive as `code.py`.
 
-### 3. `makcu` (Dual PC UDP Input)
-- Ideal for dual-PC setups.
-- Transmits relative movements over UDP to a secondary host running `lib/makcu_second_pc/listener.py`.
+### 3. Connecting in Lunar LITE GUI
+1. Open Windows Device Manager and check Ports (COM & LPT) to find your Pico's port (e.g. `COM3`).
+2. Open the Lunar GUI (`python lunar.py`), select **Mouse Input Method: pico**, and type your COM port into **Pico COM Port** (e.g. `COM3`).
 
 ---
 
-## 🖥️ Launching the Graphical User Interface (GUI)
+## 🖱️ Other Mouse Input Drivers (`ddxoft` / `win32` / `makcu`)
 
-Launch Lunar LITE using:
-```bash
-start.bat
-```
-or via terminal:
-```bash
-python lunar.py
-```
+### 1. `ddxoft` (Hardware Simulation DLL)
+- Included DLL: `lib/mouse/dd40605x64.dll`
+- Right-click `start.bat` and select **"Run as administrator"**.
 
-This opens the **Lunar LITE AI Control Panel**:
+### 2. `win32` (Standard Windows Input API)
+- Works out of the box on any Windows system without driver requirements.
+
+### 3. `makcu` (Dual PC UDP Input)
+- Sends relative movements over UDP to a secondary host running `lib/makcu_second_pc/listener.py`.
 
 ---
 
@@ -73,16 +70,17 @@ This opens the **Lunar LITE AI Control Panel**:
 
 | Setting | Range / Options | Description |
 | :--- | :--- | :--- |
-| **Smoothness** | `0.0` to `5.0` | Controls target tracking smoothness. `0.0` = **Instant Lock-On**, `5.0` = **Very Smooth & Natural Tracking** (eliminates screen capture freezing). |
+| **Smoothness** | `0.0` to `10.0` | Controls target tracking smoothness (`0.0` = Fast, `10.0` = Very Smooth/Slow). |
 | **FOV Box Size** | `100` to `600` px | Sets the detection box size centered on your crosshair. |
-| **In-Game X/Y Sens**| `0.5` to `20.0` | Set this to match your in-game horizontal and vertical mouse sensitivity. |
-| **Targeting Sens** | `0.5` to `20.0` | Set this to match your in-game ADS / Scoping sensitivity. |
-| **Aim Height Offset**| `1` to `20` | Offset ratio for targeting. Lower values aim closer to the head, higher values aim towards the chest/body. |
-| **YOLO Model Selector** | Dropdown (`*.pt`) | Instantly switch between custom AI model files stored in `lib/` (e.g., `lib/best.pt`, `lib/yolov11.pt`). |
+| **In-Game X/Y Sens**| `0.5` to `20.0` | Match your in-game horizontal and vertical mouse sensitivity. |
+| **Targeting Sens** | `0.5` to `20.0` | Match your in-game ADS / Scoping sensitivity. |
+| **Aim Height Offset**| `1` to `20` | Lower values aim closer to the head, higher values aim towards the chest/body. |
+| **YOLO Model Selector** | Dropdown (`*.pt`) | Instantly switch between AI model files in `lib/`. |
 | **Confidence Threshold**| `0.10` to `0.95` | AI confidence required before locking on. Default is `0.45` (45%). |
-| **Mouse Input Method** | `ddxoft` / `win32` / `makcu` | Select your active mouse driver. |
+| **Mouse Input Method** | `pico` / `ddxoft` / `win32` / `makcu` | Select your active mouse driver. |
+| **Pico COM Port** | e.g. `COM3` | Serial port for Raspberry Pi Pico HID. |
 | **Auto Triggerbot** | Switch (On/Off) | Automatically fires when crosshair locks onto an enemy target. |
-| **Always On Top** | Switch (On/Off) | Ensures the live screen capture window remains on top of game windows. |
+| **Always On Top** | Switch (On/Off) | Keeps the live screen capture preview on top. |
 
 ---
 
@@ -90,19 +88,3 @@ This opens the **Lunar LITE AI Control Panel**:
 
 - **`F1`**: Toggle Aimbot On / Off in real-time.
 - **`F2`**: Clean Exit & Emergency Stop.
-
----
-
-## ❓ Troubleshooting & FAQs
-
-### Q1: Screen freeze when aiming / right-clicking
-- **Fixed in this version!** Target movements now process in real-time per frame without sleeping the capture thread.
-
-### Q2: `[!] CUDA ACCELERATION IS UNAVAILABLE`
-- Ensure you have an NVIDIA GPU and installed PyTorch CUDA build.
-- Command: `pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126`
-
-### Q3: Mouse is not moving in-game
-- Run `start.bat` as Administrator.
-- Set game display mode to **Windowed Fullscreen** or **Borderless Windowed**.
-- If `ddxoft` fails, switch Mouse Method in the GUI dropdown to `win32`.

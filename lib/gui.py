@@ -21,6 +21,7 @@ def load_config():
         "aim_height": 10,
         "use_trigger_bot": True,
         "mouse_method": "ddxoft",
+        "pico_port": "COM3",
         "always_on_top": True,
         "selected_model": "lib/best.pt"
     }
@@ -49,7 +50,7 @@ class LunarGUI(ctk.CTk):
         self.config_data = load_config()
 
         self.title("🌙 Lunar LITE AI - Control Panel")
-        self.geometry("860x700")
+        self.geometry("860x720")
         self.resizable(False, False)
 
         # Configure dark theme palette
@@ -221,14 +222,24 @@ class LunarGUI(ctk.CTk):
 
         self.mouse_dropdown = ctk.CTkOptionMenu(
             right_column,
-            values=["ddxoft", "win32", "makcu"],
+            values=["pico", "ddxoft", "win32", "makcu"],
             command=self.on_mouse_method_change,
             fg_color="#27272a",
             button_color="#3f3f46",
             button_hover_color="#52525b"
         )
-        self.mouse_dropdown.set(self.config_data.get("mouse_method", "ddxoft"))
-        self.mouse_dropdown.pack(fill="x", padx=20, pady=(0, 15))
+        self.mouse_dropdown.set(self.config_data.get("mouse_method", "pico"))
+        self.mouse_dropdown.pack(fill="x", padx=20, pady=(0, 5))
+
+        # Pico COM Port
+        pico_frame = ctk.CTkFrame(right_column, fg_color="transparent")
+        pico_frame.pack(fill="x", padx=20, pady=(0, 15))
+        pico_lbl = ctk.CTkLabel(pico_frame, text="Pico COM Port:", font=ctk.CTkFont(size=12), text_color="#9ca3af")
+        pico_lbl.pack(side="left")
+        self.pico_port_entry = ctk.CTkEntry(pico_frame, width=100, fg_color="#27272a", text_color="#e5e7eb")
+        self.pico_port_entry.insert(0, self.config_data.get("pico_port", "COM3"))
+        self.pico_port_entry.pack(side="right")
+        self.pico_port_entry.bind("<FocusOut>", lambda e: self.save_current_config())
 
         # Switches Frame
         switches_frame = ctk.CTkFrame(right_column, fg_color="transparent")
@@ -327,9 +338,7 @@ class LunarGUI(ctk.CTk):
         self.aimbot.always_on_top = bool(self.always_top_switch.get())
 
         m_method = self.mouse_dropdown.get()
-        if self.aimbot.mouse_method != m_method:
-            self.aimbot.mouse_method = m_method
-            self.aimbot.init_mouse_driver()
+        self.aimbot.mouse_method = m_method
 
         model_p = self.model_dropdown.get()
         if os.path.exists(model_p):
@@ -337,16 +346,22 @@ class LunarGUI(ctk.CTk):
 
         xy_sens = float(self.xy_sens_var.get())
         targeting_sens = float(self.targeting_sens_var.get())
+        pico_port = self.pico_port_entry.get().strip() or "COM3"
+
         self.aimbot.sens_config = {
             "xy_sens": xy_sens,
             "targeting_sens": targeting_sens,
             "xy_scale": 0.5 / xy_sens if xy_sens > 0 else 0.1,
-            "targeting_scale": 25.0 / (targeting_sens * xy_sens) if (targeting_sens * xy_sens) > 0 else 1.0
+            "targeting_scale": 25.0 / (targeting_sens * xy_sens) if (targeting_sens * xy_sens) > 0 else 1.0,
+            "pico_port": pico_port
         }
+        self.aimbot.init_mouse_driver()
 
     def save_current_config(self):
         xy_sens = float(self.xy_sens_var.get())
         targeting_sens = float(self.targeting_sens_var.get())
+        pico_port = self.pico_port_entry.get().strip() or "COM3"
+
         cfg = {
             "xy_sens": xy_sens,
             "targeting_sens": targeting_sens,
@@ -358,6 +373,7 @@ class LunarGUI(ctk.CTk):
             "aim_height": int(self.aim_height_var.get()),
             "use_trigger_bot": bool(self.triggerbot_switch.get()),
             "mouse_method": self.mouse_dropdown.get(),
+            "pico_port": pico_port,
             "always_on_top": bool(self.always_top_switch.get()),
             "selected_model": self.model_dropdown.get()
         }
@@ -395,7 +411,6 @@ class LunarGUI(ctk.CTk):
     def on_mouse_method_change(self, val):
         if self.aimbot:
             self.aimbot.mouse_method = val
-            self.aimbot.init_mouse_driver()
         self.save_current_config()
 
     def on_triggerbot_toggle(self):

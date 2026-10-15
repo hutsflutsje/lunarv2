@@ -12,6 +12,11 @@ from termcolor import colored
 from ultralytics import YOLO
 import socket
 
+try:
+    import serial
+except ImportError:
+    serial = None
+
 # Safely import win32api
 try:
     import win32api
@@ -33,11 +38,12 @@ aim_height = 10
 fov = 350
 confidence = 0.45
 use_trigger_bot = True
-smoothness = 0.0 # 0 is lock on, 5 is very smooth
+smoothness = 2.0
 always_on_top = True
 
-mouse_methods = ['win32', 'ddxoft', 'makcu']
+mouse_methods = ['win32', 'ddxoft', 'makcu', 'pico']
 mouse_method = mouse_methods[1]
+pico_port = 'COM3'
 
 second_pc_ip = '192.67.67.67'
 
@@ -74,6 +80,47 @@ class Input(ctypes.Structure):
 class POINT(ctypes.Structure):
     _fields_ = [("x", ctypes.c_long), ("y", ctypes.c_long)]
 
+class PicoSerial:
+    def __init__(self, port="COM3"):
+        self.port = port
+        self.serial = None
+
+    def connect(self, port=None):
+        if port:
+            self.port = port
+        if not serial:
+            print(colored("[!] pyserial is not installed. Install with 'pip install pyserial'", "red"))
+            return False
+        try:
+            self.serial = serial.Serial(self.port, baudrate=115200, timeout=0.2)
+            time.sleep(0.1)
+            self.serial.write(b"PING\n")
+            time.sleep(0.1)
+            reply = self.serial.readline().decode(errors="ignore").strip()
+            if "PONG" in reply:
+                print(colored(f"[INFO] Raspberry Pi Pico connected on {self.port}", "green"))
+                return True
+            print(colored(f"[!] Pico on {self.port} replied with {reply!r} instead of PONG", "yellow"))
+            return True
+        except Exception as e:
+            print(colored(f"[!] Failed to connect to Raspberry Pi Pico on {self.port}: {e}", "yellow"))
+            self.serial = None
+            return False
+
+    def move(self, dx, dy):
+        if self.serial and self.serial.is_open:
+            try:
+                self.serial.write(f"M,{int(dx)},{int(dy)}\n".encode())
+            except Exception:
+                pass
+
+    def click(self):
+        if self.serial and self.serial.is_open:
+            try:
+                self.serial.write(b"CLICK\n")
+            except Exception:
+                pass
+
 class MAKCU_UDP:
     def __init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -102,7 +149,8 @@ class Aimbot:
         "xy_sens": 5.0,
         "targeting_sens": 5.0,
         "xy_scale": 0.1,
-        "targeting_scale": 1.0
+        "targeting_scale": 1.0,
+        "pico_port": "COM3"
     }
     if os.path.exists("lib/config/config.json"):
         try:
@@ -117,6 +165,7 @@ class Aimbot:
 
     mouse_dll = None
     makcu = None
+    pico = None
     ddxoft_attempted = False
 
     def __init__(self, box_constant = fov, collect_data = False, mouse_delay = 0.0009):
@@ -156,7 +205,12 @@ class Aimbot:
         print("\n[INFO] PRESS 'F1' TO TOGGLE AIMBOT\n[INFO] PRESS 'F2' TO QUIT")
 
     def init_mouse_driver(self):
-        if self.mouse_method.lower() == 'makcu':
+        if self.mouse_method.lower() == 'pico':
+            port = self.sens_config.get("pico_port", "COM3")
+            if not Aimbot.pico:
+                Aimbot.pico = PicoSerial(port=port)
+            Aimbot.pico.connect(port=port)
+        elif self.mouse_method.lower() == 'makcu':
             if not Aimbot.makcu:
                 Aimbot.makcu = MAKCU_UDP()
         elif self.mouse_method.lower() == 'ddxoft':
@@ -203,6 +257,9 @@ class Aimbot:
 
     def left_click(self):
         match self.mouse_method.lower():
+            case 'pico':
+                if Aimbot.pico:
+                    Aimbot.pico.click()
             case 'ddxoft':
                 if Aimbot.mouse_dll:
                     Aimbot.mouse_dll.DD_btn(1)
@@ -267,18 +324,15 @@ class Aimbot:
 
         scale = self.sens_config.get("targeting_scale", 1.0)
 
-        # Calculate relative distance from screen center
         diff_x = (x - screen_x) * scale
         diff_y = (y - screen_y) * scale
 
-        # Smoothness dampening factor: higher smoothness = much slower movement
         smooth_val = max(0.0, float(self.smoothness))
         smooth_factor = 1.0 / (1.0 + smooth_val * 2.0)
 
         move_x = diff_x * smooth_factor
         move_y = diff_y * smooth_factor
 
-        # Ensure minimal movement step if distance is small
         if abs(move_x) < 1.0 and abs(diff_x) >= 0.5:
             rel_x = 1 if diff_x > 0 else -1
         else:
@@ -293,6 +347,9 @@ class Aimbot:
             return
 
         match self.mouse_method.lower():
+            case 'pico':
+                if Aimbot.pico:
+                    Aimbot.pico.move(rel_x, rel_y)
             case 'ddxoft':
                 if Aimbot.mouse_dll:
                     Aimbot.mouse_dll.DD_movR(rel_x, rel_y)
@@ -407,7 +464,7 @@ class Aimbot:
             cv2.putText(frame, f"FPS: {fps}", (5, 30), cv2.FONT_HERSHEY_DUPLEX, 1, (113, 116, 244), 2)
             cv2.imshow("Screen Capture", frame)
 
-            if not window_created or self.always_on_top:
+            if not window_created:
                 self.set_always_on_top()
                 window_created = True
 
