@@ -13,10 +13,10 @@ def load_config():
     default_config = {
         "xy_sens": 5.0,
         "targeting_sens": 5.0,
-        "xy_scale": 2.0,
-        "targeting_scale": 20.0,
+        "xy_scale": 0.1,
+        "targeting_scale": 1.0,
         "fov": 350,
-        "smoothness": 0.0,
+        "smoothness": 2.0,
         "confidence": 0.45,
         "aim_height": 10,
         "use_trigger_bot": True,
@@ -119,14 +119,14 @@ class LunarGUI(ctk.CTk):
         left_title.pack(anchor="w", padx=20, pady=(15, 10))
 
         # Smoothness Slider
-        self.smoothness_var = ctk.DoubleVar(value=float(self.config_data.get("smoothness", 0.0)))
+        self.smoothness_var = ctk.DoubleVar(value=float(self.config_data.get("smoothness", 2.0)))
         self.create_slider(
             left_column,
-            label="Smoothness (0 = Lock-On, 5 = Very Smooth):",
+            label="Smoothness (0 = Fast, 10 = Very Slow/Smooth):",
             variable=self.smoothness_var,
             from_=0.0,
-            to=5.0,
-            steps=50,
+            to=10.0,
+            steps=100,
             command=self.on_smoothness_change
         )
 
@@ -340,8 +340,8 @@ class LunarGUI(ctk.CTk):
         self.aimbot.sens_config = {
             "xy_sens": xy_sens,
             "targeting_sens": targeting_sens,
-            "xy_scale": 10 / xy_sens if xy_sens > 0 else 2.0,
-            "targeting_scale": 1000 / (targeting_sens * xy_sens) if (targeting_sens * xy_sens) > 0 else 20.0
+            "xy_scale": 0.5 / xy_sens if xy_sens > 0 else 0.1,
+            "targeting_scale": 25.0 / (targeting_sens * xy_sens) if (targeting_sens * xy_sens) > 0 else 1.0
         }
 
     def save_current_config(self):
@@ -350,8 +350,8 @@ class LunarGUI(ctk.CTk):
         cfg = {
             "xy_sens": xy_sens,
             "targeting_sens": targeting_sens,
-            "xy_scale": 10 / xy_sens if xy_sens > 0 else 2.0,
-            "targeting_scale": 1000 / (targeting_sens * xy_sens) if (targeting_sens * xy_sens) > 0 else 20.0,
+            "xy_scale": 0.5 / xy_sens if xy_sens > 0 else 0.1,
+            "targeting_scale": 25.0 / (targeting_sens * xy_sens) if (targeting_sens * xy_sens) > 0 else 1.0,
             "fov": int(self.fov_var.get()),
             "smoothness": round(float(self.smoothness_var.get()), 2),
             "confidence": round(float(self.conf_var.get()), 2),

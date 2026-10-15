@@ -101,8 +101,8 @@ class Aimbot:
     default_sens = {
         "xy_sens": 5.0,
         "targeting_sens": 5.0,
-        "xy_scale": 2.0,
-        "targeting_scale": 20.0
+        "xy_scale": 0.1,
+        "targeting_scale": 1.0
     }
     if os.path.exists("lib/config/config.json"):
         try:
@@ -257,15 +257,15 @@ class Aimbot:
         if not Aimbot.is_targeted():
             return
 
-        scale = Aimbot.sens_config.get("targeting_scale", 20.0)
+        scale = self.sens_config.get("targeting_scale", 1.0)
 
         # Calculate relative distance from screen center
         diff_x = (x - screen_x) * scale
         diff_y = (y - screen_y) * scale
 
-        # Smoothness 0 = lock on (100% per frame), Smoothness 5 = smooth dampening (~16.6% per frame)
+        # Smoothness dampening factor: higher smoothness = much slower movement
         smooth_val = max(0.0, float(self.smoothness))
-        smooth_factor = 1.0 / (1.0 + smooth_val)
+        smooth_factor = 1.0 / (1.0 + smooth_val * 2.0)
 
         move_x = diff_x * smooth_factor
         move_y = diff_y * smooth_factor
