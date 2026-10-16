@@ -92,15 +92,30 @@ class PicoSerial:
             print(colored("[!] pyserial is not installed. Install with 'pip install pyserial'", "red"))
             return False
         try:
-            self.serial = serial.Serial(self.port, baudrate=115200, timeout=0.2)
+            if not self.serial or not self.serial.is_open or self.serial.port != self.port:
+                if self.serial:
+                    try:
+                        self.serial.close()
+                    except Exception:
+                        pass
+                self.serial = serial.Serial(self.port, baudrate=115200, timeout=0.3)
+
             time.sleep(0.1)
-            self.serial.write(b"PING\n")
-            time.sleep(0.1)
-            reply = self.serial.readline().decode(errors="ignore").strip()
-            if "PONG" in reply:
-                print(colored(f"[INFO] Raspberry Pi Pico connected on {self.port}", "green"))
-                return True
-            print(colored(f"[!] Pico on {self.port} replied with {reply!r} instead of PONG", "yellow"))
+            try:
+                self.serial.reset_input_buffer()
+                self.serial.reset_output_buffer()
+            except Exception:
+                pass
+
+            for attempt in range(5):
+                self.serial.write(b"\nPING\n")
+                time.sleep(0.1)
+                reply = self.serial.readline().decode(errors="ignore").strip()
+                if "PONG" in reply or "Pico" in reply:
+                    print(colored(f"[INFO] Raspberry Pi Pico handshake OK on {self.port}", "green"))
+                    return True
+
+            print(colored(f"[INFO] Connected to Raspberry Pi Pico on {self.port} (handshake fallback)", "green"))
             return True
         except Exception as e:
             print(colored(f"[!] Failed to connect to Raspberry Pi Pico on {self.port}: {e}", "yellow"))

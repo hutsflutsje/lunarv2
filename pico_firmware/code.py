@@ -15,6 +15,7 @@ from adafruit_hid.mouse import Mouse
 mouse = Mouse(usb_hid.devices)
 
 print("Pico HID Mouse Ready")
+sys.stdout.flush()
 
 while True:
     try:
@@ -22,7 +23,7 @@ while True:
         if not line:
             continue
 
-        if line == "PING":
+        if "PING" in line:
             print("PONG")
             sys.stdout.flush()
         elif line.startswith("M,"):
@@ -31,7 +32,7 @@ while True:
                 dx = int(parts[1])
                 dy = int(parts[2])
                 mouse.move(x=dx, y=dy)
-        elif line == "CLICK" or line == "C":
+        elif "CLICK" in line or line == "C":
             mouse.click(Mouse.LEFT_BUTTON)
     except Exception as e:
-        time.sleep(0.01)
+        time.sleep(0.001)
